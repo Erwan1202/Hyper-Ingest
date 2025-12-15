@@ -3,6 +3,7 @@ boost/1.86.0
 simdjson/3.10.1
 qt/6.6.3
 duckdb/1.0.0
+gtest/1.14.0
 
 [generators]
 CMakeDeps
@@ -17,4 +18,7 @@ qt/*:qtquick=True
 qt/*:with_postgresql=False
 qt/*:with_odbc=False
 qt/*:with_mysql=False
+qt/*:widgets=False
+qt/*:gui=False
+qt/*:with_x11=False
 boost/*:pch=False
