@@ -22,5 +22,3 @@ compile_commands.json
 conan.lock
 conanbuildinfo.cmake
 
-#tests
-tests/
