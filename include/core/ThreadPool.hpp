@@ -84,7 +84,7 @@ namespace civic {
 
         std::vector<std::thread> workers_;
         std::queue<std::function<void()>> tasks_;
-        std::function<void()> task_;  // Repeating task for all workers
+        std::function<void()> task_; 
         std::mutex mutex_;
         std::condition_variable cv_;
         bool stop_;

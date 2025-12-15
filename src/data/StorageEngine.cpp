@@ -7,7 +7,7 @@ namespace civic {
         : db_(dbPath == ":memory:" ? nullptr : dbPath.c_str()), con_(db_), parser_() 
     {
 
-        // 1. Schema Creation
+
         auto result = con_.Query(R"(
             CREATE TABLE ingest_logs (
                 ingest_ts TIMESTAMP,
@@ -22,7 +22,6 @@ namespace civic {
             exit(1);
         }
 
-        // 2. Self-Check : Verify table exists immediately
         auto check = con_.Query("SELECT count(*) FROM ingest_logs");
         if (check->HasError()) {
              std::cerr << "[DB] FATAL: Self-Check Failed - Table missing!" << std::endl;
@@ -37,15 +36,13 @@ namespace civic {
     void StorageEngine::ingest(const std::string& rawJson) {
         std::lock_guard<std::mutex> lock(writeMutex_);
         
-        // Simdjson parsing...
         simdjson::padded_string padded = rawJson;
         simdjson::dom::element doc;
         auto err = parser_.parse(padded).get(doc);
-        if (err) { return; } // Silent skip on parse error for speed
+        if (err) { return; }
 
         std::string author = "Unknown", title = "Untitled";
         
-        // Try/Catch free extraction logic
         simdjson::dom::element slideshow;
         if (doc["slideshow"].get(slideshow) == simdjson::SUCCESS) {
              std::string_view sv;
@@ -55,7 +52,6 @@ namespace civic {
 
         auto stmt = con_.Prepare("INSERT INTO ingest_logs VALUES (now(), ?, ?, ?)");
         if(!stmt->success) {
-            // Si ca echoue ici, c'est grave, on l'affiche
             std::cerr << "[DB] Prepare Fail: " << stmt->error.Message() << std::endl;
             return;
         }

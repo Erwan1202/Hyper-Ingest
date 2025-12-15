@@ -15,18 +15,15 @@ find_package(duckdb REQUIRED)
 find_package(Qt6 6.6 REQUIRED COMPONENTS Core Qml)
 find_package(GTest REQUIRED)
 
-# If you use Qt .ui/.qml/.qrc files:
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 include_directories(include)
 
-# Source files (excluding main.cpp for tests)
 file(GLOB_RECURSE LIB_SOURCES "src/data/*.cpp" "src/Network/*.cpp")
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
-# Main executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_link_libraries(CivicCore_HyperIngest

@@ -38,7 +38,7 @@ void mockProducer(civic::RingBuffer<std::string>& queue) {
         if(!queue.push(mock_json)) {
             std::this_thread::yield(); 
         }
-        // Pas de sleep = Max CPU saturation
+
     }
 }
 
@@ -78,11 +78,10 @@ void monitoringLoop() {
 }
 
 int main() {
-    // FORCE IN-MEMORY DATABASE 
-    // Evite tous les problemes de lock fichier et de corruption de schema
+
     civic::StorageEngine storage(":memory:");
 
-    civic::RingBuffer<std::string> queue(8192); // Buffer augmenté
+    civic::RingBuffer<std::string> queue(8192); 
 
     unsigned int num_workers = std::max(1u, std::thread::hardware_concurrency() - 2);
     civic::ThreadPool consumerPool(num_workers);
