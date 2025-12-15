@@ -1,8 +1,8 @@
 [requires]
-boost/1.83.0
-simdjson/3.6.3
-qt/6.6.1
-duckdb/0.9.2
+boost/1.86.0
+simdjson/3.10.1
+qt/6.6.3
+duckdb/1.0.0
 
 [generators]
 CMakeDeps
@@ -10,3 +10,11 @@ CMakeToolchain
 
 [layout]
 cmake_layout
+
+[options]
+qt/*:qtdeclarative=True
+qt/*:qtquick=True
+qt/*:with_postgresql=False
+qt/*:with_odbc=False
+qt/*:with_mysql=False
+boost/*:pch=False

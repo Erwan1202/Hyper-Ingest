@@ -9,26 +9,27 @@ if(EXISTS "${CMAKE_BINARY_DIR}/generators/conan_toolchain.cmake")
     include("${CMAKE_BINARY_DIR}/generators/conan_toolchain.cmake")
 endif()
 
-find_package(Boost COMPONENTS system thread QUIET)
-find_package(simdjson QUIET)
-find_package(Qt6 COMPONENTS Core Quick QUIET)
-find_package(duckdb QUIET)
+find_package(Boost REQUIRED)
+find_package(simdjson REQUIRED)
+find_package(duckdb REQUIRED)
+find_package(Qt6 6.6 REQUIRED COMPONENTS Core Gui Qml)
+
+# If you use Qt .ui/.qml/.qrc files:
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
 
 include_directories(include)
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-if(Boost_FOUND)
-    target_link_libraries(${PROJECT_NAME} PRIVATE Boost::system Boost::thread)
-endif()
-if(simdjson_FOUND)
-    target_link_libraries(${PROJECT_NAME} PRIVATE simdjson::simdjson)
-endif()
-if(Qt6_FOUND)
-    target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Core Qt6::Quick)
-    set_property(TARGET ${PROJECT_NAME} PROPERTY QT_STANDARD_PROJECT_SETUP ON)
-endif()
-if(duckdb_FOUND)
-    target_link_libraries(${PROJECT_NAME} PRIVATE duckdb::duckdb)
-endif()
+target_link_libraries(CivicCore_HyperIngest
+    PRIVATE
+    boost::boost
+    simdjson::simdjson
+    duckdb::duckdb
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Qml
+)

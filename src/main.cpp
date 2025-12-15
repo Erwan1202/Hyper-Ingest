@@ -1,18 +1,51 @@
 #include <iostream>
-// #include <boost/asio.hpp>
-// #include <simdjson.h>
-// #include <duckdb.hpp>
-// #include <QCoreApplication>
+#include <string>
+#include <thread>
+#include <chrono>
+#include "core/RingBuffer.hpp"
+#include "core/Threadpool.hpp"
+#include "Network/HttpIngestor.hpp"
 
-int main(int argc, char *argv[]) {
+std::atomic<bool> g_running{true};
 
-    std::cout << "[INIT] Booting CivicCore :: Hyper-Ingest..." << std::endl;
+void consumerTask(civic::RingBuffer<std::string>& buffer) {
+    std::string data;
+    while (g_running) {
+        if (buffer.pop(data)) {
+            std::cout << "\n[CONSUMER] Received Payload (" << data.size() << " bytes):\n" 
+                      << data.substr(0, 100) << "...\n[END PREVIEW]\n" << std::endl;
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    }
+}
+
+int main() {
+    std::cout << "[SYSTEM] Starting CivicCore Integration Test..." << std::endl;
+
+    civic::RingBuffer<std::string> buffer(16); 
+
+    civic::ThreadPool pool(2);
+    pool.setTask([&buffer](){ 
+        consumerTask(buffer); 
+    });
+    std::cout << "[SYSTEM] ThreadPool (Consumers) started." << std::endl;
+
+    boost::asio::io_context ioc;
+    civic::HttpIngestor ingestor(buffer, ioc);
+
+    std::cout << "[SYSTEM] Launching HTTP Request..." << std::endl;
+    ingestor.fetch("httpbin.org", "80", "/json");
+
+    std::thread ioThread([&ioc](){
+        ioc.run();
+    });
+
+    std::this_thread::sleep_for(std::chrono::seconds(3));
     
-    std::cout << "[DEPS] Boost Asio Available." << std::endl;
-
-    std::cout << "[DEPS] simdjson initialized (AVX2/NEON ready)." << std::endl;
-
-    std::cout << "[DEPS] DuckDB In-Memory Instance created." << std::endl;
-
+    g_running = false;
+    ioThread.join();
+    
+    std::cout << "[SYSTEM] Test Finished." << std::endl;
     return 0;
 }

@@ -2,7 +2,7 @@
 
 #include <atomic>
 #include <vector>
-#include <optional>
+#include <memory>
 #include <cassert>
 
 namespace civic {
@@ -11,11 +11,11 @@ namespace civic {
     class RingBuffer {
     public:
         explicit RingBuffer(size_t bufferSize) 
-            : buffer_(bufferSize), bufferMask_(bufferSize - 1) 
+            : buffer_(bufferSize), bufferMask_(bufferSize - 1),
+              sequence_(new std::atomic<size_t>[bufferSize])
         {
             assert((bufferSize != 0) && ((bufferSize & (bufferSize - 1)) == 0));
             
-            sequence_.resize(bufferSize);
             for (size_t i = 0; i < bufferSize; ++i) {
                 sequence_[i].store(i, std::memory_order_relaxed);
             }
@@ -75,7 +75,7 @@ namespace civic {
 
         std::vector<T> buffer_;
         size_t bufferMask_;
-        std::vector<std::atomic<size_t>> sequence_;
+        std::unique_ptr<std::atomic<size_t>[]> sequence_;
         
         alignas(64) std::atomic<size_t> enqueuePos_;
         alignas(64) std::atomic<size_t> dequeuePos_;
