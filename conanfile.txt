@@ -4,6 +4,7 @@ simdjson/3.10.1
 qt/6.6.3
 duckdb/1.0.0
 gtest/1.14.0
+openssl/3.2.1
 
 [generators]
 CMakeDeps

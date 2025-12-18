@@ -2,7 +2,7 @@
 
 #include <string>
 #include <vector>
-#include <mutex>
+#include <memory>
 #include <duckdb.hpp>
 #include <simdjson.h>
 
@@ -13,15 +13,14 @@ namespace civic {
         explicit StorageEngine(const std::string& dbPath = ":memory:");
         ~StorageEngine();
 
-        void ingest(const std::string& rawJson);
+        std::unique_ptr<duckdb::Connection> createConnection();
 
-        void query(const std::string& sql);
+        void ingest(duckdb::Connection& con, const std::string& rawJson);
+
+        void query(duckdb::Connection& con, const std::string& sql);
 
     private:
         duckdb::DuckDB db_;
-        duckdb::Connection con_;
-        
         simdjson::dom::parser parser_;
-        std::mutex writeMutex_;
     };
 }

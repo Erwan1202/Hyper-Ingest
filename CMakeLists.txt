@@ -14,6 +14,7 @@ find_package(simdjson REQUIRED)
 find_package(duckdb REQUIRED)
 find_package(Qt6 6.6 REQUIRED COMPONENTS Core Qml)
 find_package(GTest REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -21,7 +22,7 @@ set(CMAKE_AUTOUIC ON)
 
 include_directories(include)
 
-file(GLOB_RECURSE LIB_SOURCES "src/data/*.cpp" "src/Network/*.cpp")
+file(GLOB_RECURSE LIB_SOURCES "src/data/*.cpp" "src/Network/*.cpp" "src/search/*.cpp")
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -33,6 +34,8 @@ target_link_libraries(CivicCore_HyperIngest
     duckdb::duckdb
     Qt6::Core
     Qt6::Qml
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )
 
 # ============== TESTS ==============
@@ -56,6 +59,8 @@ target_link_libraries(CivicCore_Tests
     simdjson::simdjson
     duckdb::duckdb
     Qt6::Core
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )
 
 include(GoogleTest)
