@@ -271,7 +271,11 @@
         "acronym": "RRD74agglo",
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": "https://hautesavoie.fr",
@@ -3048,13 +3052,13 @@
         "title": "GAR-Liste_des_ressources 2025",
         "uri": "https://www.data.gouv.fr/api/1/datasets/gar-liste-des-ressources-2025/",
         "enriched_keywords": [
-            "GAR",
-            "Hachette",
-            "Hatier",
             "Gestionnaire d",
             "accès aux Ressources",
+            "Lumni Enseignement",
             "Nathan",
-            "Lumni Enseignement"
+            "GAR",
+            "Hachette",
+            "Hatier"
         ]
     },
     {
@@ -3293,7 +3297,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,
@@ -4952,7 +4960,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,
@@ -5331,7 +5343,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,
@@ -5485,7 +5501,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,
@@ -5855,7 +5875,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,
@@ -6016,7 +6040,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,
@@ -6184,7 +6212,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,
@@ -6560,7 +6592,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,
@@ -6721,7 +6757,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,
@@ -7236,7 +7276,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,
@@ -7598,7 +7642,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,
@@ -8710,7 +8758,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,
@@ -9072,7 +9124,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,
@@ -11175,7 +11231,11 @@
         "acronym": null,
         "archived": null,
         "authorization_request_url": null,
-        "badges": [],
+        "badges": [
+            {
+                "kind": "inspire"
+            }
+        ],
         "contact_points": [
             {
                 "contact_form": null,

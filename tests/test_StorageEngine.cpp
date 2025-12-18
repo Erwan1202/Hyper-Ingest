@@ -34,7 +34,8 @@ TEST(StorageEngineTest, IngestValidJson) {
         }
     })";
     
-    EXPECT_NO_THROW(engine.ingest(validJson));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.ingest(*con, validJson));
 }
 
 TEST(StorageEngineTest, IngestSimpleJson) {
@@ -42,7 +43,8 @@ TEST(StorageEngineTest, IngestSimpleJson) {
     
     std::string simpleJson = R"({"key": "value", "number": 42})";
     
-    EXPECT_NO_THROW(engine.ingest(simpleJson));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.ingest(*con, simpleJson));
 }
 
 TEST(StorageEngineTest, IngestJsonWithMissingFields) {
@@ -50,7 +52,8 @@ TEST(StorageEngineTest, IngestJsonWithMissingFields) {
     
     std::string incompleteJson = R"({"data": [1, 2, 3]})";
     
-    EXPECT_NO_THROW(engine.ingest(incompleteJson));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.ingest(*con, incompleteJson));
 }
 
 TEST(StorageEngineTest, IngestInvalidJson) {
@@ -58,7 +61,8 @@ TEST(StorageEngineTest, IngestInvalidJson) {
     
     std::string invalidJson = "{ not valid json }";
     
-    EXPECT_NO_THROW(engine.ingest(invalidJson));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.ingest(*con, invalidJson));
 }
 
 TEST(StorageEngineTest, IngestEmptyJson) {
@@ -66,7 +70,8 @@ TEST(StorageEngineTest, IngestEmptyJson) {
     
     std::string emptyJson = "{}";
     
-    EXPECT_NO_THROW(engine.ingest(emptyJson));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.ingest(*con, emptyJson));
 }
 
 TEST(StorageEngineTest, IngestNestedJson) {
@@ -86,7 +91,8 @@ TEST(StorageEngineTest, IngestNestedJson) {
         }
     })";
     
-    EXPECT_NO_THROW(engine.ingest(nestedJson));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.ingest(*con, nestedJson));
 }
 
 TEST(StorageEngineTest, IngestJsonWithArray) {
@@ -101,7 +107,8 @@ TEST(StorageEngineTest, IngestJsonWithArray) {
         }
     })";
     
-    EXPECT_NO_THROW(engine.ingest(arrayJson));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.ingest(*con, arrayJson));
 }
 
 TEST(StorageEngineTest, IngestLargeJson) {
@@ -114,20 +121,23 @@ TEST(StorageEngineTest, IngestLargeJson) {
     }
     largeJson += "]}}";
     
-    EXPECT_NO_THROW(engine.ingest(largeJson));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.ingest(*con, largeJson));
 }
 
 
 TEST(StorageEngineTest, QueryValidSQL) {
     StorageEngine engine(":memory:");
     
-    EXPECT_NO_THROW(engine.query("SELECT * FROM ingest_logs"));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.query(*con, "SELECT * FROM ingest_logs"));
 }
 
 TEST(StorageEngineTest, QueryInvalidSQL) {
     StorageEngine engine(":memory:");
     
-    EXPECT_NO_THROW(engine.query("INVALID SQL QUERY"));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.query(*con, "INVALID SQL QUERY"));
 }
 
 TEST(StorageEngineTest, QueryAfterIngest) {
@@ -140,41 +150,44 @@ TEST(StorageEngineTest, QueryAfterIngest) {
         }
     })";
     
-    engine.ingest(json);
+    auto con = engine.createConnection();
+    engine.ingest(*con, json);
     
-    EXPECT_NO_THROW(engine.query("SELECT COUNT(*) FROM ingest_logs"));
+    EXPECT_NO_THROW(engine.query(*con, "SELECT COUNT(*) FROM ingest_logs"));
+    EXPECT_NO_THROW(engine.query(*con, "SELECT COUNT(*) FROM ingest_logs"));
 }
 
 TEST(StorageEngineTest, QueryCount) {
     StorageEngine engine(":memory:");
     
+    auto con = engine.createConnection();
     for (int i = 0; i < 5; ++i) {
         std::string json = R"({"slideshow": {"author": "Author)" + std::to_string(i) + 
                            R"(", "title": "Title)" + std::to_string(i) + R"("}})";
-        engine.ingest(json);
+        engine.ingest(*con, json);
     }
-    
-    EXPECT_NO_THROW(engine.query("SELECT COUNT(*) as count FROM ingest_logs"));
+    EXPECT_NO_THROW(engine.query(*con, "SELECT COUNT(*) as count FROM ingest_logs"));
 }
 
 
 TEST(StorageEngineTest, ConcurrentIngestion) {
     StorageEngine engine(":memory:");
+    auto con = engine.createConnection();
     const int numThreads = 4;
     const int ingestsPerThread = 50;
     
     std::vector<std::thread> threads;
     
     for (int t = 0; t < numThreads; ++t) {
-        threads.emplace_back([&engine, t, ingestsPerThread]() {
+        threads.emplace_back([&engine, &con, t, ingestsPerThread]() {
             for (int i = 0; i < ingestsPerThread; ++i) {
                 std::string json = R"({
                     "slideshow": {
                         "author": "Thread)" + std::to_string(t) + R"(",
-                        "title": "Item)" + std::to_string(i) + R"("
+                        "title": "Item)" + std::to_string(i) + R"(" 
                     }
                 })";
-                engine.ingest(json);
+                engine.ingest(*con, json);
             }
         });
     }
@@ -183,25 +196,26 @@ TEST(StorageEngineTest, ConcurrentIngestion) {
         t.join();
     }
     
-    EXPECT_NO_THROW(engine.query("SELECT COUNT(*) FROM ingest_logs"));
+    EXPECT_NO_THROW(engine.query(*con, "SELECT COUNT(*) FROM ingest_logs"));
 }
 
 TEST(StorageEngineTest, ConcurrentIngestAndQuery) {
     StorageEngine engine(":memory:");
+    auto con = engine.createConnection();
     std::atomic<bool> running{true};
     
     std::thread ingestThread([&]() {
         for (int i = 0; i < 100 && running; ++i) {
             std::string json = R"({"slideshow": {"author": "Concurrent", "title": "Test)" + 
                                std::to_string(i) + R"("}})";
-            engine.ingest(json);
+            engine.ingest(*con, json);
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     });
     
     std::thread queryThread([&]() {
         for (int i = 0; i < 20 && running; ++i) {
-            engine.query("SELECT COUNT(*) FROM ingest_logs");
+            engine.query(*con, "SELECT COUNT(*) FROM ingest_logs");
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
     });
@@ -226,7 +240,8 @@ TEST(StorageEngineTest, IngestUnicodeJson) {
         }
     })";
     
-    EXPECT_NO_THROW(engine.ingest(unicodeJson));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.ingest(*con, unicodeJson));
 }
 
 TEST(StorageEngineTest, IngestSpecialCharacters) {
@@ -240,7 +255,8 @@ TEST(StorageEngineTest, IngestSpecialCharacters) {
         }
     })";
     
-    EXPECT_NO_THROW(engine.ingest(specialJson));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.ingest(*con, specialJson));
 }
 
 TEST(StorageEngineTest, IngestNumericValues) {
@@ -257,7 +273,8 @@ TEST(StorageEngineTest, IngestNumericValues) {
         }
     })";
     
-    EXPECT_NO_THROW(engine.ingest(numericJson));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.ingest(*con, numericJson));
 }
 
 TEST(StorageEngineTest, IngestBooleanValues) {
@@ -273,7 +290,8 @@ TEST(StorageEngineTest, IngestBooleanValues) {
         }
     })";
     
-    EXPECT_NO_THROW(engine.ingest(boolJson));
+    auto con = engine.createConnection();
+    EXPECT_NO_THROW(engine.ingest(*con, boolJson));
 }
 
 
@@ -282,10 +300,11 @@ TEST(StorageEngineTest, BatchIngestion) {
     
     auto start = std::chrono::high_resolution_clock::now();
     
+    auto con = engine.createConnection();
     for (int i = 0; i < 100; ++i) {
         std::string json = R"({"slideshow": {"author": "Batch", "title": "Item)" + 
                            std::to_string(i) + R"(", "data": ")" + std::string(100, 'x') + R"("}})";
-        engine.ingest(json);
+        engine.ingest(*con, json);
     }
     
     auto end = std::chrono::high_resolution_clock::now();

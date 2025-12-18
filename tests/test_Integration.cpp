@@ -13,6 +13,7 @@ namespace test {
 TEST(IntegrationTest, DataPipeline) {
     RingBuffer<std::string> buffer(64);
     StorageEngine storage(":memory:");
+    auto con = storage.createConnection();
     ThreadPool pool(2);
     
     std::atomic<int> processedCount{0};
@@ -22,7 +23,7 @@ TEST(IntegrationTest, DataPipeline) {
         while (shouldRun.load()) {
             std::string data;
             if (buffer.pop(data)) {
-                storage.ingest(data);
+                storage.ingest(*con, data);
                 processedCount.fetch_add(1);
             } else {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -98,7 +99,7 @@ TEST(IntegrationTest, MultipleProducerPipeline) {
     EXPECT_EQ(producedCount.load(), totalItems);
     EXPECT_EQ(consumedCount.load(), totalItems);
 }
-
+// Gros caca Made In Moi (ca s'appelle la fatigue chérie :D)
 TEST(IntegrationTest, HighContention) {
     RingBuffer<int> buffer(128);
     std::atomic<int> totalProduced{0};
@@ -152,6 +153,7 @@ TEST(IntegrationTest, HighContention) {
 
 TEST(IntegrationTest, StorageConcurrency) {
     StorageEngine storage(":memory:");
+    auto con = storage.createConnection();
     std::atomic<int> writeCount{0};
     std::atomic<int> readCount{0};
     std::atomic<bool> running{true};
@@ -162,7 +164,7 @@ TEST(IntegrationTest, StorageConcurrency) {
         for (int i = 0; i < numWrites; ++i) {
             std::string json = R"({"slideshow": {"author": "Writer", "title": "Item)" + 
                                std::to_string(i) + R"("}})";
-            storage.ingest(json);
+            storage.ingest(*con, json);
             writeCount.fetch_add(1);
         }
     });
@@ -171,7 +173,7 @@ TEST(IntegrationTest, StorageConcurrency) {
     for (int r = 0; r < 3; ++r) {
         readers.emplace_back([&]() {
             while (running.load()) {
-                storage.query("SELECT COUNT(*) FROM ingest_logs");
+                storage.query(*con, "SELECT COUNT(*) FROM ingest_logs");
                 readCount.fetch_add(1);
                 std::this_thread::sleep_for(std::chrono::milliseconds(5));
             }
@@ -193,6 +195,7 @@ TEST(IntegrationTest, StorageConcurrency) {
 TEST(IntegrationTest, SimulatedHttpIngestion) {
     RingBuffer<std::string> buffer(64);
     StorageEngine storage(":memory:");
+    auto con = storage.createConnection();
     ThreadPool pool(2);
     
     std::atomic<int> ingestedCount{0};
@@ -202,7 +205,7 @@ TEST(IntegrationTest, SimulatedHttpIngestion) {
         while (shouldRun.load()) {
             std::string data;
             if (buffer.pop(data)) {
-                storage.ingest(data);
+                storage.ingest(*con, data);
                 ingestedCount.fetch_add(1);
             } else {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));

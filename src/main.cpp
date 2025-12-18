@@ -126,11 +126,12 @@ void afficherResultats(const civic::ResultatRecherche& resultats) {
 civic::ResultatRecherche lancerRecherche(
     civic::SearchService& searchService,
     civic::RingBuffer<std::string>& queue,
-    const civic::CriteresRecherche& criteres
+    const civic::CriteresRecherche& criteres,
+    bool local
 ) {
-    std::cout << "\n[SEARCH] Lancement de la recherche...\n";
+    std::cout << "\n[SEARCH] Lancement de la recherche (" << (local ? "locale" : "web") << ")...\n";
     
-    auto resultats = searchService.rechercher(criteres);
+    auto resultats = local ? searchService.rechercherLocal(criteres) : searchService.rechercher(criteres);
     afficherResultats(resultats);
     
     return resultats;
@@ -144,10 +145,10 @@ void ingererDataset(
     std::cout << "\n[INGEST] Ingestion du dataset: " << dataset.titre << "\n";
     
     for (const auto& ressource : dataset.ressources) {
-        auto verification = searchService.verifierRessource(ressource.url);
-        
-        if (verification.disponible) {
-            std::cout << "  ✓ Ressource disponible: " << ressource.titre << "\n";
+        // En mode local, on ne vérifie pas la ressource distante
+        // auto verification = searchService.verifierRessource(ressource.url);
+        // if (verification.disponible) {
+            std::cout << "  ✓ Ressource (metadonnees): " << ressource.titre << "\n";
             
             std::ostringstream json;
             json << "{"
@@ -168,20 +169,21 @@ void ingererDataset(
             
             g_bytes_ingested += json.str().size();
             g_records_processed++;
-        } else {
-            std::cout << "  ✗ Ressource indisponible (HTTP " << verification.httpStatus << "): " 
-                      << ressource.titre << "\n";
-        }
+        // } else {
+        //     std::cout << "  ✗ Ressource indisponible (HTTP " << verification.httpStatus << "): " 
+        //               << ressource.titre << "\n";
+        // }
     }
 }
 
 void modeRechercheInteractif(
     civic::SearchService& searchService,
-    civic::RingBuffer<std::string>& queue
+    civic::RingBuffer<std::string>& queue,
+    bool local
 ) {
     std::cout << "\n";
     std::cout << "╔══════════════════════════════════════════════════════════════╗\n";
-    std::cout << "║          HYPER-INGEST - RECHERCHE DATA.GOUV.FR               ║\n";
+    std::cout << "║    HYPER-INGEST - RECHERCHE DATA.GOUV.FR (" << (local ? "LOCAL" : "WEB") << ")         ║\n";
     std::cout << "╚══════════════════════════════════════════════════════════════╝\n";
     
     afficherThematiques();
@@ -236,7 +238,7 @@ void modeRechercheInteractif(
     }
     
     auto criteres = builder.build();
-    auto resultats = lancerRecherche(searchService, queue, criteres);
+    auto resultats = lancerRecherche(searchService, queue, criteres, local);
     
     if (!resultats.jeux.empty()) {
         std::cout << "\nIngérer un dataset? Entrez le numéro [1-" << resultats.jeux.size() << "] ou 'q' pour quitter: ";
@@ -258,6 +260,7 @@ void modeRechercheInteractif(
 civic::ResultatRecherche rechercherAvecFiltres(
     civic::SearchService& searchService,
     const std::string& requete,
+    bool local,
     civic::Thematique thematique = civic::Thematique::TOUTES,
     civic::Territoire territoire = civic::Territoire::TOUS,
     civic::SourceType source = civic::SourceType::TOUTES,
@@ -272,9 +275,12 @@ civic::ResultatRecherche rechercherAvecFiltres(
         .certifieesUniquement(certifieesUniquement)
         .parPage(parPage)
         .formatsStricts({civic::FormatFichier::CSV, civic::FormatFichier::JSON})
-        .verifierDisponibilite(true)
+        .verifierDisponibilite(!local) // Ne pas vérifier la dispo en mode local
         .build();
     
+    if (local) {
+        return searchService.rechercherLocal(criteres);
+    }
     return searchService.rechercher(criteres);
 }
 
@@ -317,6 +323,7 @@ int main(int argc, char* argv[]) {
 
     bool modeRecherche = false;
     bool modeDemo = false;
+    bool modeLocal = false;
     std::string requeteDirecte;
     
     for (int i = 1; i < argc; ++i) {
@@ -325,6 +332,8 @@ int main(int argc, char* argv[]) {
             modeRecherche = true;
         } else if (arg == "--demo" || arg == "-d") {
             modeDemo = true;
+        } else if (arg == "--local" || arg == "-l") {
+            modeLocal = true;
         } else if (arg == "--query" || arg == "-q") {
             if (i + 1 < argc) {
                 requeteDirecte = argv[++i];
@@ -336,10 +345,13 @@ int main(int argc, char* argv[]) {
             std::cout << "  -s, --search       Mode recherche interactif\n";
             std::cout << "  -q, --query TEXT   Recherche directe avec le texte spécifié\n";
             std::cout << "  -d, --demo         Mode démo (recherche exemple)\n";
+            std::cout << "  -l, --local        Mode recherche locale (utilise data_enriched.json)\n";
             std::cout << "  -h, --help         Affiche cette aide\n";
             std::cout << "\nExemples:\n";
             std::cout << "  " << argv[0] << " --search\n";
+            std::cout << "  " << argv[0] << " --search --local\n";
             std::cout << "  " << argv[0] << " --query \"population communes\"\n";
+            std::cout << "  " << argv[0] << " --query \"dechets menagers\" --local\n";
             std::cout << "  " << argv[0] << " --demo\n";
             return 0;
         }
@@ -357,6 +369,7 @@ int main(int argc, char* argv[]) {
             auto resultats = rechercherAvecFiltres(
                 searchService,
                 "INSEE population",
+                modeLocal,
                 civic::Thematique::TOUTES,
                 civic::Territoire::TOUS,
                 civic::SourceType::TOUTES,
@@ -371,7 +384,7 @@ int main(int argc, char* argv[]) {
             
         } else if (!requeteDirecte.empty()) {
             std::cout << "\n[SEARCH] Recherche: '" << requeteDirecte << "'\n";
-            auto resultats = rechercherAvecFiltres(searchService, requeteDirecte);
+            auto resultats = rechercherAvecFiltres(searchService, requeteDirecte, modeLocal);
             
             if (!resultats.jeux.empty()) {
                 std::string input;
@@ -389,7 +402,7 @@ int main(int argc, char* argv[]) {
             }
             
         } else {
-            modeRechercheInteractif(searchService, queue);
+            modeRechercheInteractif(searchService, queue, modeLocal);
         }
         
         return 0;

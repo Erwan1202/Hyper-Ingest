@@ -146,6 +146,7 @@ namespace civic {
         ~SearchService();
 
         ResultatRecherche rechercher(const CriteresRecherche& criteres);
+        ResultatRecherche rechercherLocal(const CriteresRecherche& criteres);
         void rechercherAsync(const CriteresRecherche& criteres, SearchCallback callback);
         VerificationRessource verifierRessource(const std::string& url);
         void verifierRessourceAsync(const std::string& url, VerifyCallback callback);

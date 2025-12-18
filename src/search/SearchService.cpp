@@ -834,4 +834,166 @@ namespace civic {
         return file.good();
     }
 
+    ResultatRecherche SearchService::rechercherLocal(const CriteresRecherche& criteres) {
+        auto start = std::chrono::steady_clock::now();
+
+        std::ifstream file("/data_enriched.json");
+        if (!file.is_open()) {
+            std::cerr << "[SEARCH-LOCAL] Erreur: Impossible d'ouvrir data_enriched.json" << std::endl;
+            return {};
+        }
+
+        std::string json_content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        file.close();
+
+        simdjson::dom::parser parser;
+        simdjson::padded_string padded(json_content);
+        simdjson::dom::array doc;
+        auto error = parser.parse(padded).get(doc);
+
+        if (error) {
+            std::cerr << "[SEARCH-LOCAL] Erreur de parsing JSON: " << error << std::endl;
+            return {};
+        }
+
+        std::vector<JeuDeDonnees> all_matches;
+
+        // Traitement de la requête textuelle
+        std::vector<std::string> query_words;
+        if (!criteres.requete.empty()) {
+            std::string requete_norm = normaliserTexte(criteres.requete);
+            std::stringstream ss(requete_norm);
+            std::string word;
+            while (ss >> word) {
+                query_words.push_back(word);
+            }
+        }
+        
+        // Tags de la thématique
+        std::vector<std::string> tags_thematique = getTagsThematique(criteres.thematique);
+
+        for (simdjson::dom::element datasetEl : doc) {
+            bool match = true;
+
+            // 1. Filtrage par certification
+            bool is_certified = false;
+            simdjson::dom::element org_el;
+            if (datasetEl["organization"].get(org_el) == simdjson::SUCCESS) {
+                simdjson::dom::array badges;
+                if (org_el["badges"].get(badges) == simdjson::SUCCESS) {
+                    for (auto badge : badges) {
+                        std::string_view kind;
+                        if (badge["kind"].get(kind) == simdjson::SUCCESS && (kind == "public-service" || kind == "certified" || kind == "spd")) {
+                            is_certified = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (criteres.uniquementCertifiees && !is_certified) {
+                continue; // Skip non-certified if required
+            }
+
+            // 2. Filtrage textuel (le coeur de la recherche)
+            if (!query_words.empty()) {
+                std::string text_corpus;
+                std::string_view sv;
+
+                if (datasetEl["title"].get(sv) == simdjson::SUCCESS) text_corpus += std::string(sv) + " ";
+                if (datasetEl["description"].get(sv) == simdjson::SUCCESS) text_corpus += std::string(sv) + " ";
+
+                simdjson::dom::array tags;
+                if (datasetEl["tags"].get(tags) == simdjson::SUCCESS) {
+                    for (auto tag : tags) {
+                        if (tag.get(sv) == simdjson::SUCCESS) text_corpus += std::string(sv) + " ";
+                    }
+                }
+                
+                simdjson::dom::array enriched_keywords;
+                if (datasetEl["enriched_keywords"].get(enriched_keywords) == simdjson::SUCCESS) {
+                    for (auto keyword : enriched_keywords) {
+                        if (keyword.get(sv) == simdjson::SUCCESS) text_corpus += std::string(sv) + " ";
+                    }
+                }
+
+                std::string corpus_norm = normaliserTexte(text_corpus);
+                
+                for (const auto& word : query_words) {
+                    if (corpus_norm.find(word) == std::string::npos) {
+                        match = false;
+                        break;
+                    }
+                }
+            }
+            if (!match) continue;
+            
+            // 3. Filtrage par thématique
+            if (criteres.thematique != Thematique::TOUTES) {
+                bool theme_match = false;
+                simdjson::dom::array tags;
+                if (datasetEl["tags"].get(tags) == simdjson::SUCCESS) {
+                    for (auto tag_el : tags) {
+                        std::string_view tag_sv;
+                        if (tag_el.get(tag_sv) == simdjson::SUCCESS) {
+                            for (const auto& theme_tag : tags_thematique) {
+                                if (theme_tag == tag_sv) {
+                                    theme_match = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (theme_match) break;
+                    }
+                }
+                if (!theme_match) continue;
+            }
+
+            JeuDeDonnees jeu;
+            std::string_view sv;
+            if (datasetEl["id"].get(sv) == simdjson::SUCCESS) jeu.id = std::string(sv);
+            if (datasetEl["title"].get(sv) == simdjson::SUCCESS) jeu.titre = std::string(sv);
+            if (datasetEl["description"].get(sv) == simdjson::SUCCESS) jeu.description = std::string(sv);
+            if (datasetEl["organization"]["name"].get(sv) == simdjson::SUCCESS) jeu.organisation = std::string(sv);
+            jeu.organisationCertifiee = is_certified;
+            
+            simdjson::dom::array resources;
+            if (datasetEl["resources"].get(resources) == simdjson::SUCCESS) {
+                for (auto resEl : resources) {
+                    Ressource res;
+                    if (resEl["url"].get(sv) == simdjson::SUCCESS) res.url = std::string(sv);
+                    if (resEl["title"].get(sv) == simdjson::SUCCESS) res.titre = std::string(sv);
+                    std::string mime;
+                    if (resEl["mime"].get(sv) == simdjson::SUCCESS) mime = std::string(sv);
+                    auto formatOpt = mimeTypeVersFormat(mime);
+                    if(formatOpt.has_value()) res.format = formatOpt.value();
+                    jeu.ressources.push_back(res);
+                }
+            }
+            all_matches.push_back(std::move(jeu));
+        }
+
+        // Pagination
+        ResultatRecherche resultat;
+        resultat.totalResultats = all_matches.size();
+        resultat.pageCourante = criteres.page;
+        resultat.totalPages = (resultat.totalResultats > 0 && criteres.parPage > 0) ? (resultat.totalResultats + criteres.parPage - 1) / criteres.parPage : 0;
+
+        int start_index = (criteres.page - 1) * criteres.parPage;
+        
+        if (start_index < (int)all_matches.size()) {
+            int end_index = std::min(start_index + criteres.parPage, (int)all_matches.size());
+            for (int i = start_index; i < end_index; ++i) {
+                resultat.jeux.push_back(all_matches[i]);
+            }
+        }
+        
+        auto end = std::chrono::steady_clock::now();
+        resultat.tempsRecherche = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        
+        std::cout << "[SEARCH-LOCAL] Found " << resultat.jeux.size() << " datasets on this page ("
+                  << resultat.totalResultats << " total)" << std::endl;
+
+        return resultat;
+    }
+
 }

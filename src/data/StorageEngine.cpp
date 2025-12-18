@@ -9,7 +9,6 @@ namespace civic {
     StorageEngine::StorageEngine(const std::string& dbPath) 
         : db_(dbPath == ":memory:" ? nullptr : dbPath.c_str()), parser_() 
     {
-        // Créer une connexion temporaire pour initialiser le schéma
         duckdb::Connection con(db_);
 
         auto result = con.Query(R"(
